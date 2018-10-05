@@ -1,3 +1,4 @@
+
 library(shiny)
 library(httr)
 library(jsonlite)
@@ -11,19 +12,23 @@ ckanSQL <- function(url) {
   c <- content(r, "text")
   # Basic gsub to make NA's consistent with R
   json <- gsub('NaN', 'NA', c, perl = TRUE)
+  # json2 <- gsub(' ', '%20', json, perl = TRUE)
   # Create Dataframe
   data.frame(jsonlite::fromJSON(json)$result$records)
 }
 
 # Unique values for Resource Field
 ckanUniques <- function(id, field) {
-  url <- paste0("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20DISTINCT(%22", field, "%22)%20from%20%22", id, "%22")
+  url <- paste0("https://data.wprdc.org/api/3/action/datastore_search_sql?sql=SELECT%20DISTINCT(%22", field, "%22)%20from%20%22", id, "%22")
   c(ckanSQL(URLencode(url)))
 }
 
 departmenttype <- sort(ckanUniques("f61f6e8c-7b93-4df3-9935-4937899901c7", "department_name")$department_name)
 
 ledgercode <- sort(ckanUniques("f61f6e8c-7b93-4df3-9935-4937899901c7", "ledger_code")$ledger_code)
+
+amount_city <- sort(ckanUniques("f61f6e8c-7b93-4df3-9935-4937899901c7", "amount")$amount)
+
 
 # Define UI for application
 ui <- navbarPage("Investing in Innovation Appplications NavBar", 
@@ -33,16 +38,16 @@ ui <- navbarPage("Investing in Innovation Appplications NavBar",
                               selectInput("department_type_select",
                                           "Department Name",
                                           choices = departmenttype,
-                                          selected = "URA Projects"),
+                                          selected = "OMI"),
                               checkboxGroupInput("ledger_code_select", 
                                                  "Ledger Code",
                                                  choices = ledgercode,
                                                  selected = c("5")),
                               sliderInput("Amount_select",
                                           "Amount",
-                                          min = -100000,
-                                          max = 100000,
-                                          value = c(-100000, 100000),
+                                          min = min(amount_city),
+                                          max = max(amount_city),
+                                          value = c(min(amount_city), max(amount_city)),
                                           step = 1),
                               actionButton("reset", "Reset Filters", icon = icon("refresh"))
                             ),
@@ -70,44 +75,23 @@ ui <- navbarPage("Investing in Innovation Appplications NavBar",
 
 # Define server logic
 server <- function(input, output,session = session) {
-  # datainput <- reactive({
-  #   # Build API Query with proper encodes
-  #   url <- paste0("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20*%20FROM%20%22f61f6e8c-7b93-4df3-9935-4937899901c7%22%20WHERE%20%22department_name%22%20=%20%27", input$department_type_select, "%27%20AND%20%22object_account_description%22%20=%20%27", input$ledger_code_select, "%27%20AND%20%22amount%22%20=%20%27", input$Amount_select, "%27")
-  #   
-  #   # Load and clean data
-  #   dataurl <- ckanSQL(url)
-  #   dataCity <- dataurl %>%
-  #     # Slider Filter
-  #     filter(amount >= input$Amount_select[1] & amount <= input$Amount_select[2])
-  #   # State Filter
-  #   if (length(input$department_type_select) > 0 ) {
-  #     dataCity <- subset(dataCity, department_name %in% input$department_type_select)
-  #   }
-  #   # Private Match Waiver Filter
-  #   if (length(input$ledger_code_select)>0) {
-  #     dataCity <- subset(dataCity, ledger_code %in% input$ledger_code_select)
-  #   }
-  #   return(dataCity)
-  # })
   datainput <- reactive({
     # Build API Query with proper encodes
-    url <- paste0("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20*%20FROM%20%22f61f6e8c-7b93-4df3-9935-4937899901c7%22%20WHERE%20%22department_name%22%20=%20%27", input$department_type_select, "%27%20AND%20%22object_account_description%22%20=%20%27", input$ledger_code_select, "%27%20AND%20%22amount%22%20=%20%27", input$Amount_select, "%27")
-
-    # Load and clean data
+    url <- paste0("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20*%20FROM%20%22f61f6e8c-7b93-4df3-9935-4937899901c7%22%20WHERE%20department_name%20%3D%20%22", input$department_type_select, "%22%20AND%20ledger_code%20%3D%20%22", input$ledger_code_select, "%22%20")
+    # url <- paste0("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20*%20FROM%20%2276fda9d0-69be-4dd5-8108-0de7907fc5a4%22%20WHERE%20%22CREATED_ON%22%20%3E=%20%27", input$dates[1], "%27%20AND%20%22CREATED_ON%22%20%3C=%20%27", input$dates[2], "%27%20AND%20%22REQUEST_TYPE%22%20=%20%27", input$type_select, "%27%20")
+    # url <- paste0("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20*%20FROM%20%22f61f6e8c-7b93-4df3-9935-4937899901c7%22%20WHERE%20%22department_name%22%20%3D%20%27", input$department_type_select, "%27%20AND%20%22ledger_code%22%20%3D%20%27", input$ledger_code_select, "%27%20AND%20%22amount%22%20%3D%20%27", input$Amount_select, "%27%20")
     dataCity <- ckanSQL(url)%>%
-      return(dataCity)
-  #   dataCity <- dataurl %>%
-  #     # Slider Filter
-  #     filter(amount >= input$Amount_select[1] & amount <= input$Amount_select[2])
-  #   # State Filter
-  #   if (length(input$department_type_select) > 0 ) {
-  #     dataCity <- subset(dataCity, department_name %in% input$department_type_select)
-  #   }
-  #   # Private Match Waiver Filter
-  #   if (length(input$ledger_code_select)>0) {
-  #     dataCity <- subset(dataCity, ledger_code %in% input$ledger_code_select)
-  #   }
-  #   return(dataCity)
+      # Slider Filter
+      #filter(amount >= input$Amount_select[1] & amount <= input$Amount_select[2])
+    # State Filter
+    if (length(input$department_type_select) > 0 ) {
+      dataCity <- subset(dataCity, department_name %in% input$department_type_select)
+    }
+    # Private Match Waiver Filter
+    if (length(input$ledger_code_select)>0) {
+      dataCity <- subset(dataCity, ledger_code %in% input$ledger_code_select)
+    }
+    return(dataCity)
   })
   
   # plot three figures
@@ -163,13 +147,13 @@ server <- function(input, output,session = session) {
       paste("City expense", Sys.Date(), ".csv", sep="")
     },
     content = function(file) {
-      write.csv(swInput(), file)
+      write.csv(dataInput(), file)
     }
   )
   # Reset Filter Data
   observeEvent(input$reset, {
-    updateSelectInput(session, "department_type_select", selected = "URA Projects")
-    updateSliderInput(session, "Amount_select", value = c(-100000, 100000))
+    updateSelectInput(session, "department_type_select", selected = "OMI")
+    updateSliderInput(session, "Amount_select", value = c(min(amount_city), max(amount_city)))
     updateCheckboxGroupInput(session, "ledger_code_select", choices = ledgercode, selected = c("5"))
     showNotification("You have successfully reset the filters", type = "message")
   })
@@ -178,3 +162,4 @@ server <- function(input, output,session = session) {
 
 # Run the application 
 shinyApp(ui = ui, server = server, enableBookmarking = "url")
+

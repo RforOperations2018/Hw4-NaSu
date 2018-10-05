@@ -1,0 +1,51 @@
+---
+title: "Untitled"
+author: "Na Su"
+date: "October 5, 2018"
+output: html_document
+---
+```{r}
+library(plyr)
+library(dplyr)
+library(plotly)
+library(ggplot2)
+library(shiny)
+library(reshape2)
+library(data.table)
+library(DT)
+library(httr)
+library(jsonlite)
+library(plotly)
+library(htmltools)
+```
+
+```{r}
+ckanSQL <- function(url) {
+  # Make the Request
+  r <- RETRY("GET", URLencode(url))
+  # Extract Content
+  c <- content(r, "text")
+  # Basic gsub to make NA's consistent with R
+  json <- gsub('NaN', 'NA', c, perl = TRUE)
+  # Create Dataframe
+  data.frame(jsonlite::fromJSON(json)$result$records)
+}
+```
+
+```{r}
+ckanColumn <- function(id, field) {
+  url <- paste0("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20%22", field, "%22%20from%20%22", id, "%22")
+  c(ckanSQL(URLencode(url)))
+}
+```
+
+```{r}
+currentdelq <- sort(ckanColumn("ed0d1550-c300-4114-865c-82dc7c23235b", "current_delq")$current_delq)
+statedescription <- sort(ckanColumn("ed0d1550-c300-4114-865c-82dc7c23235b", "state_description")$state_description)
+prioryears <- sort(ckanColumn("ed0d1550-c300-4114-865c-82dc7c23235b", "prior_years")$prior_years)
+```
+
+
+
+
+
