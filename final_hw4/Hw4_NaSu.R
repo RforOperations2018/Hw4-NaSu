@@ -28,16 +28,19 @@ ckanColumn <- function(id, field) {
   c(ckanSQL(URLencode(url)))
 }
 
-#get wanted columns to form dataframe
-departmenttype <- sort(ckanColumn("f61f6e8c-7b93-4df3-9935-4937899901c7", "department_name")$department_name)
+ckanUniques <- function(id, field) {
+  url <- paste0("https://data.wprdc.org/api/action/datastore_search_sql?sql=SELECT%20DISTINCT(%22", field, "%22)%20from%20%22", id, "%22")
+  c(ckanSQL(URLencode(url)))
+}
 
-ledgercode <- sort(ckanColumn("f61f6e8c-7b93-4df3-9935-4937899901c7", "ledger_code")$ledger_code)
 
-amount_city <- sort(ckanColumn("f61f6e8c-7b93-4df3-9935-4937899901c7", "amount")$amount)
+ledgercode1 <- sort(ckanUniques("f61f6e8c-7b93-4df3-9935-4937899901c7", "ledger_code")$ledger_code)
 
-funddescription <- sort(ckanColumn("f61f6e8c-7b93-4df3-9935-4937899901c7", "fund_description")$fund_description)
+amount_city1 <- sort(ckanUniques("f61f6e8c-7b93-4df3-9935-4937899901c7", "amount")$amount)
 
-data_all <- data.frame(departmenttype,ledgercode,amount_city,funddescription)
+funddescription1 <- sort(ckanUniques("f61f6e8c-7b93-4df3-9935-4937899901c7", "fund_description")$fund_description)
+
+
 
 # Define UI for application
 ui <- navbarPage("City Wide Revenues and Expenses NavBar", 
@@ -47,21 +50,21 @@ ui <- navbarPage("City Wide Revenues and Expenses NavBar",
                               # select
                               selectInput("funddescription_select",
                                           "fund description:",
-                                          choices = sort(unique(data_all$funddescription)),
+                                          choices = funddescription1,
                                           multiple = TRUE,
                                           selectize = TRUE,
                                           selected = c("GENERAL FUND","SENIOR CITIZENS PROG TF")),
                               # checkbox Selection
                               checkboxGroupInput("ledgercode_select", 
                                                  "Ledgercode:",
-                                                 choices = sort(unique(data_all$ledgercode)),
+                                                 choices = ledgercode1,
                                                  selected = c("4", "5")),
                               # Slider Selection
                               sliderInput("amount_select",
                                           "Amount:",
-                                          min = min(data_all$amount_city, na.rm = T),
-                                          max = max(data_all$amount_city, na.rm = T),
-                                          value = c(min(data_all$amount_city, na.rm = T), max(data_all$amount_city, na.rm = T)),
+                                          min = min(amount_city1, na.rm = T),
+                                          max = max(amount_city1, na.rm = T),
+                                          value = c(min(amount_city1, na.rm = T), max(amount_city1, na.rm = T)),
                                           step = 1),
                               actionButton("reset", "Reset Filters", icon = icon("refresh"))
                             ),
@@ -88,6 +91,16 @@ ui <- navbarPage("City Wide Revenues and Expenses NavBar",
 
 # Define server logic
 server <- function(input, output, session = session) {
+  #get wanted columns to form dataframe
+  departmenttype <- sort(ckanColumn("f61f6e8c-7b93-4df3-9935-4937899901c7", "department_name")$department_name)
+  
+  ledgercode <- sort(ckanColumn("f61f6e8c-7b93-4df3-9935-4937899901c7", "ledger_code")$ledger_code)
+  
+  amount_city <- sort(ckanColumn("f61f6e8c-7b93-4df3-9935-4937899901c7", "amount")$amount)
+  
+  funddescription <- sort(ckanColumn("f61f6e8c-7b93-4df3-9935-4937899901c7", "fund_description")$fund_description)
+  
+  data_all <- data.frame(departmenttype,ledgercode,amount_city,funddescription)
   # Filtered investing data
   dataInput <- reactive({
     data <- data_all %>%
@@ -164,9 +177,9 @@ server <- function(input, output, session = session) {
   # Reset Filter Data
   observeEvent(input$reset, {
     updateSelectInput(session, "ledgercode_select", selected = c("4", "5"))
-    updateSliderInput(session, "amount_select", value = c(min(data_all$amount_city, na.rm = T), 
-                                                          max(data_all$amount_city, na.rm = T)))
-    updateCheckboxGroupInput(session, "funddescription_select", choices = sort(unique(data_all$funddescription)),
+    updateSliderInput(session, "amount_select", value = c(min(amount_city1, na.rm = T), 
+                                                          max(amount_city1, na.rm = T)))
+    updateCheckboxGroupInput(session, "funddescription_select", choices = funddescription1,
                              selected = c("	GENERAL FUND","SENIOR CITIZENS PROG TF"))
     showNotification("You have successfully reset the filters", type = "message")
   })
@@ -177,3 +190,4 @@ server <- function(input, output, session = session) {
 
 # Run the application 
 shinyApp(ui = ui, server = server, enableBookmarking = "url")
+
