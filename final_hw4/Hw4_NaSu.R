@@ -99,7 +99,8 @@ server <- function(input, output, session = session) {
   amount_city <- sort(ckanColumn("f61f6e8c-7b93-4df3-9935-4937899901c7", "amount")$amount)
   
   funddescription <- sort(ckanColumn("f61f6e8c-7b93-4df3-9935-4937899901c7", "fund_description")$fund_description)
-  
+  # So, for this assignment the idea is to pass your filters into the function that calls for the data. Instead what you've done is loaded each column separately. Look at the code for the ckanSQL() function from the inclass example and you should see that you did not need to call each column individually. Your app mostly works however, so you do not get a failing grade for functionality.
+  #Retrieve all field values 
   data_all <- data.frame(departmenttype,ledgercode,amount_city,funddescription)
   # Filtered investing data
   dataInput <- reactive({
@@ -107,6 +108,7 @@ server <- function(input, output, session = session) {
       # Slider Filter
       filter(amount_city >= input$amount_select[1] & amount_city <= input$amount_select[2])
     #  Filter
+    # These should be in your URL generation
     if (length(input$ledgercode_select) > 0 ) {
       data <- subset(data, ledgercode %in% input$ledgercode_select)
     }
